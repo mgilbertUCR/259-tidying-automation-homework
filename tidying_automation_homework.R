@@ -98,10 +98,50 @@ words_graph <- function(df) {
   print(p)
 }
 
+words_graph(ds_longerr)
+#this works but I don't really know why... or rather I don't know why it stops at one since that df has all 3...
+
+#Write a for loop that iterates through the film names to apply the function to a subset of ds_longer (each film)
+??subset
+?subset
+#????? hmm_emoji.jpg ??? hmm? What???
+#error, I need coffee but it is 2:30 AM, brain refuses to cooperate
+#begin lame hardcoded solution
+
+filmz = c(1,7,13)
+for(i in filmz) {
+    words_graph(ds_longerr[i:(i+5),])
+}
+#again a shitty hack that is not in the spirit of the question but technically works
+
+?filter
+filter(ds_longerr, Film == "The Fellowship Of The Ring")
+#how do I get this to work loopily...
+#also can I do this more numerically, that's a lot to type/paste...
+#for (i in blah) { WHERE Film == 1,2,3;} < no
+#select???
+?select
+#this looks better but...
+?where
+#how do I do this without passing a lame list of hardcoded film names or knowledge of the column numbers???
+#I am stumped. Hopefully hacky answer works for now.
+
+filmz = c(1,7,13)
+for(i in filmz) {
+  words_graph(ds_longerr[i:(i+5),])
+}
+
 ### Question 7 ----------
 
 #Apply the words_graph function again, but this time
 #use split and map to apply the function to each film separately
+
+?split
+?map
+
+split(x = ds_longerr, f = ds_longerr$Film)
+map(.x = (split(x = ds_longerr, f = ds_longerr$Film)), .f = words_graph)
+#I think that worked... not sure why it's suddenly alphabetical though...
 
 ### Question 8 ---------- 
 
@@ -110,7 +150,99 @@ words_graph <- function(df) {
 #First, get the data formatted in the correct way
 #From ds_longer, create a new tibble "ds_wider" that has columns for words for each race and percentage for each race
 
+
+#ahhhhhhgh
+?pivot_wider
+#ds_wider = pivot_wider(ds_longerr, id_cols = "Words", names_from = "Sex", values_from = "Film")
+#I am having a hard time conceptualizing what "a row for male and female" means
+#Male and female responses are already separated in rows
+#????
+#also this pivot command is driving me insane because I don't know what I'm looking for
+#.... visualizing end goal...
+# TFoR | Elf | Elf% | Hobbit | etc??
+# m    | 3   | 0.1  | 48654  |
+# f    | 1   | 0.03 |     2  |
+
+vignette("pivot")
+
+#ok. row data for species, turn that into columns.  is that wider?? Seem slike longer??
+
+#ds_longer = pivot_longer(ds_combined, cols = c("Female","Male"), names_to = c("Sex"), values_to = "Words")
+#ok. what's unique for each obs? Words? 
+pivot_wider(ds_longerr, id_cols = c("Words", "Percent"), names_from = "Race", values_from = "Sex")
+#except I don't want words and percept as cols anymore....
+#oh god
+pivot_wider(ds_longerr, id_cols = c("Sex"), names_from = c("Race"), values_from = c("Percent"))
+#ok getting there but this is the bad kind where there is a list in each cell
+ds_wider = pivot_wider(ds_longerr, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Percent"))
+#aghaghd
+#how do I get a separate column for percent!
+TFoR = filter(ds_longerr, Film == "The Fellowship Of The Ring")
+ds_wider_TFoR = pivot_wider(TFoR, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+#ok, getting there. How do I do this for all 3... or should I even bother...
+TTT = filter(ds_longerr, Film == "The Two Towers")
+RotK = filter(ds_longerr, Film == "The Return Of The King")
+filmzzz = c("TFoR", "TTT", "RotK")
+
+#for(i in filmzzz) {
+#  tempds = pivot_wider(i, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+#  ds_widerrr = bind_cols(ds_wider, tempds)
+#}
+dsTFOR = pivot_wider(TFoR, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+dsTTT = pivot_wider(TTT, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+dsROTK = pivot_wider(RotK, id_cols = c("Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+
+ds_wider = bind_rows(dsTFOR,dsTTT,dsROTK)
+#except I lost the film column... f@#^
+dsTFORf = pivot_wider(TFoR, id_cols = c("Film","Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+dsTTTf = pivot_wider(TTT, id_cols = c("Film","Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+dsROTKf = pivot_wider(RotK, id_cols = c("Film","Sex","Percent"), names_from = c("Race"), values_from = c("Words","Percent"))
+ds_widerr = bind_rows(dsTFORf,dsTTTf,dsROTKf)
+#okay, f@$&ing finally
+#wide columns in desired shape
+#might like to reorder those columns but I can't be assed to figure out how at 3:43 am
+
 ### Question 9 ---------
 
 #Using your new "ds_wider" tibble, write the three data files using either a for loop or map
 #The files should be written to "data_cleaned" and should be named by film title
+?write_csv
+map(.x = (split(x = ds_widerr, f = ds_widerr$Film)), .f = write_csv(x = .x))
+#"argument X is missing, no default"
+#how do I get the thing from the 1st part of map into that???
+map(.x = (split(x = ds_widerr, f = ds_widerr$Film)), .f = write_csv(x = .x))
+#.x is not found. great
+?map
+map_dfr(.x = (split(x = ds_widerr, f = ds_widerr$Film)), .f = write_csv(as.data.frame(x = split(x = ds_widerr, f = ds_widerr$Film)), file = here()))
+#no, of course not
+install.packages("here")
+library(here)
+#map_dfr(.x = (split(x = ds_widerr, f = ds_widerr$Film)), .f = write_csv(as.data.frame(x = split(x = ds_widerr, f = ds_widerr$Film)), file = here()))
+#...
+#I quit
+#begin crap hacky non iterated answer
+write_csv(x = dsTFOR, f = here("data_cleaned","TheFellowshipOfTheRing.csv"))
+write_csv(x = dsTTT, f = here("data_cleaned","TheTwoTowers.csv"))
+write_csv(x = dsTFOR, f = here("data_cleaned","TheReturnOfTheKing.csv"))
+
+#ok, trying forreals
+#let's see...
+filmlist = list(dsTFORf,dsTTTf,dsROTKf)
+for(i in filmlist) {
+  write_csv(x = i, f = here("data_cleaned",i$Film))
+}
+#errors: is.data.frame is not TRUE??
+#is the list not data frames?
+for(i in filmlist) {
+  write_csv(x = as.data.frame(i), f = here("data_cleaned",i$Film))
+}
+#$ operator not valid for atomic vectors
+#fuck you R that is a shitty thing and I hate you
+#how else do I get the fucking column name out argh
+
+for(i in filmlist) {
+  write_csv(x = as.data.frame(i), f = here("data_cleaned", paste0(i$Film,".csv")))
+}
+?paste0
+#hnrnrnghthhgh
+#I don't know how to do this right, I'm sorry
